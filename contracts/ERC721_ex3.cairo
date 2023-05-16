@@ -3,6 +3,8 @@
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.starknet.common.syscalls import get_caller_address
 from starkware.cairo.common.uint256 import Uint256, uint256_add, uint256_check
+from starkware.cairo.common.math import assert_not_zero
+ 
 
 from openzeppelin.access.ownable.library import Ownable
 from openzeppelin.introspection.erc165.library import ERC165
@@ -24,6 +26,10 @@ func animals(token_id : Uint256) -> (animal : Animal) {
 
 @storage_var
 func last_token_id() -> (token_id : Uint256) {
+}
+
+@storage_var
+func is_breeder(breeder_address : felt) -> (is_breeder : felt) {
 }
 
 //
@@ -117,6 +123,17 @@ func get_animal_characteristics{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*
     return (sex=animal_ptr.sex, legs=animal_ptr.legs, wings=animal_ptr.wings);
 }
 
+@view
+func get_is_breeder{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    address : felt
+) -> (is_true : felt) {
+    with_attr error_message("ERC721: the zero address can't be a breeder") {
+        assert_not_zero(address);
+    }
+    let (is_true : felt) = is_breeder.read(address);
+    return (is_true,);
+}
+
 //
 // Externals
 //
@@ -167,6 +184,7 @@ func declare_animal{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
     sex : felt, legs : felt, wings : felt
 ) -> (token_id : Uint256) {
     alloc_locals;
+    assert_only_breeder();
     Ownable.assert_only_owner();
  
     // Increment token id by 1
@@ -215,6 +233,30 @@ func renounceOwnership{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_che
     return ();
 }
 
+@external
+func add_breeder{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    breeder_address : felt
+) {
+    Ownable.assert_only_owner();
+    with_attr error_message("ERC721: the zero address can't be a breeder") {
+        assert_not_zero(breeder_address);
+    }
+    is_breeder.write(breeder_address, 1);
+    return ();
+}
+ 
+@external
+func remove_breeder{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    breeder_address : felt
+) {
+    Ownable.assert_only_owner();
+    with_attr error_message("ERC721: the zero address can't be a breeder") {
+        assert_not_zero(breeder_address);
+    }
+    is_breeder.write(breeder_address, 0);
+    return ();
+}
+
 //
 // Internal functions
 //
@@ -222,5 +264,14 @@ func renounceOwnership{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_che
 func token_id_initializer{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}() {
     let zero_as_uint256 : Uint256 = Uint256(0, 0);
     last_token_id.write(zero_as_uint256);
+    return ();
+}
+
+func assert_only_breeder{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}() {
+    let (sender_address) = get_caller_address();
+    let (is_true) = is_breeder.read(sender_address);
+    with_attr error_message("Caller is not a registered breeder") {
+        assert is_true = 1;
+    }
     return ();
 }
