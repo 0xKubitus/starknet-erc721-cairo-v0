@@ -119,13 +119,21 @@ func safeTransferFrom{pedersen_ptr: HashBuiltin*, syscall_ptr: felt*, range_chec
     return ();
 }
 
+// @external
+// func mint{pedersen_ptr: HashBuiltin*, syscall_ptr: felt*, range_check_ptr}(
+//     to: felt, tokenId: Uint256
+// ) {
+//     Ownable.assert_only_owner();
+//     ERC721._mint(to, tokenId);
+//     return ();
+// }
+
 @external
-func mint{pedersen_ptr: HashBuiltin*, syscall_ptr: felt*, range_check_ptr}(
-    to: felt, tokenId: Uint256
-) {
+func declare_animal{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    sex : felt, legs : felt, wings : felt
+) -> (token_id : Uint256) {
+    alloc_locals;
     Ownable.assert_only_owner();
-    ERC721._mint(to, tokenId);
-    return ();
 }
 
 @external
