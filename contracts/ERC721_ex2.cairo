@@ -9,9 +9,9 @@ from openzeppelin.introspection.erc165.library import ERC165
 from openzeppelin.token.erc721.library import ERC721
 
 struct Animal {
-    sex : felt
-    legs : felt
-    wings : felt
+    sex : felt,
+    legs : felt,
+    wings : felt,
 }
 
 //
@@ -113,7 +113,7 @@ func get_animal_characteristics{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*
         uint256_check(token_id);
     }
     let animal = animals.read(token_id);
-    let animal_ptr = castt(&animal, Animal*);
+    let animal_ptr = cast(&animal, Animal*);
     return (sex=animal_ptr.sex, legs=animal_ptr.legs, wings=animal_ptr.wings);
 }
 
