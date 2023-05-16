@@ -2,15 +2,25 @@
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.starknet.common.syscalls import get_caller_address
-from starkware.cairo.common.uint256 import Uint256, uint256_add
+from starkware.cairo.common.uint256 import Uint256, uint256_add, uint256_check
 
 from openzeppelin.access.ownable.library import Ownable
 from openzeppelin.introspection.erc165.library import ERC165
 from openzeppelin.token.erc721.library import ERC721
 
+struct Animal {
+    sex : felt
+    legs : felt
+    wings : felt
+}
+
 //
 // Storage variables
 //
+ 
+@storage_var
+func animals(token_id : Uint256) -> (animal : Animal) {
+}
 
 @storage_var
 func last_token_id() -> (token_id : Uint256) {
@@ -95,6 +105,18 @@ func owner{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() ->
     return Ownable.owner();
 }
 
+@view
+func get_animal_characteristics{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    token_id : Uint256
+) -> (sex : felt, legs : felt, wings : felt) {
+    with_attr error_message("ERC721: token_id is not a valid Uint256") {
+        uint256_check(token_id);
+    }
+    let animal = animals.read(token_id);
+    let animal_ptr = castt(&animal, Animal*);
+    return (sex=animal_ptr.sex, legs=animal_ptr.legs, wings=animal_ptr.wings);
+}
+
 //
 // Externals
 //
@@ -147,17 +169,19 @@ func declare_animal{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
     alloc_locals;
     Ownable.assert_only_owner();
  
-    // Increment token_id by 1
+    // Increment token id by 1
     let current_token_id : Uint256 = last_token_id.read();
     let one_as_uint256 = Uint256(1, 0);
     let (local new_token_id, _) = uint256_add(current_token_id, one_as_uint256);
  
     let (sender_address) = get_caller_address();
  
-    // Mint NFT and update token_id
+    // Mint NFT and store characteristics on-chain
     ERC721._mint(sender_address, new_token_id);
-    last_token_id.write(new_token_id);
+    animals.write(new_token_id, Animal(sex=sex, legs=legs, wings=wings));
  
+    // Update and return new token id
+    last_token_id.write(new_token_id);
     return (token_id=new_token_id);
 }
 
